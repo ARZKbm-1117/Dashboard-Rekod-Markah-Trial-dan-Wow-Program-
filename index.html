@@ -192,7 +192,7 @@
         <div class="card search-card">
             <h2 style="font-size: 18px; margin-top: 0;">Sila Masukkan No. Matrik</h2>
             <div class="search-box">
-                <input type="text" id="inputMatric" placeholder="Contoh: MS2617117321" oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="inputMatric" placeholder="Contoh: MS2617117321" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                 <button class="btn" onclick="searchStudent()">Cari Pelajar</button>
             </div>
             <div id="searchAlert" class="alert hidden">No. Matrik tidak dijumpai dalam rekod database! Sila pastikan format matrik adalah betul.</div>
@@ -271,7 +271,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwJOP8wtQljR8D49AZydf-ub_tQoIDea-qC--qRAWCCdzNOm8Vm7VelzDO7CtOPFe6/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-fKxnyBi3pOTxJ715wCxsHZ2z9Mfa5AEQ9gWHq5MJJVCoHOiNjX3-eVybEb0nu2LT/exec";
 
         const setLinks = {
             1: { question: "https://drive.google.com/file/d/1ulfrBXbBsBB_dqFaajj2nyt9CKs8BBjL/view?usp=sharing", schema: "https://drive.google.com/file/d/1rhYX4bBIK39Z7lVPqRUeePtHlxr3pLe2/view?usp=sharing" },
@@ -331,12 +331,18 @@
             setTimeout(() => { bar.classList.remove("show"); }, duration);
         }
 
+        // PEMBETULAN: Memadam sebarang carian simpanan lama dan memastikan ruangan input kosong
         window.addEventListener('DOMContentLoaded', () => {
-            const savedMatric = localStorage.getItem('lastSearchedMatric');
-            if (savedMatric) {
-                document.getElementById("inputMatric").value = savedMatric;
-                searchStudent();
-            }
+            localStorage.removeItem('lastSearchedMatric'); // Padam kunci carian lama
+            document.getElementById("inputMatric").value = ""; // Paksa petak input kosong
+
+            // Membolehkan carian dipanggil apabila menekan kekunci ENTER pada input
+            document.getElementById("inputMatric").addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    searchStudent();
+                }
+            });
         });
 
         async function searchStudent() {
@@ -364,7 +370,6 @@
                         currentStudentData.setAnswerLinks = { ...currentStudentData.setAnswerLinks, ...localData.setAnswerLinks };
                     }
 
-                    localStorage.setItem('lastSearchedMatric', matric);
                     saveToLocalStorage();
 
                     renderDashboard(currentStudentData);
@@ -439,26 +444,25 @@
                     `;
 
                     const existingSetPdf = (data.setAnswerLinks && data.setAnswerLinks[setIndex]) 
-    ? data.setAnswerLinks[setIndex].toString().trim() 
-    : "";
+                        ? data.setAnswerLinks[setIndex].toString().trim() 
+                        : "";
 
-// PEMBETULAN: Hanya anggap bernilai true JIKA diawali dengan URL http:// atau https://
-const hasPdf = existingSetPdf !== "" && (existingSetPdf.startsWith("http://") || existingSetPdf.startsWith("https://"));
+                    const hasPdf = existingSetPdf !== "" && (existingSetPdf.startsWith("http://") || existingSetPdf.startsWith("https://"));
 
-uploadHtml = `
-    <div class="upload-cell">
-        <div style="display: flex; gap: 5px; flex-direction: column;">
-            <input type="file" id="pdfFileInput_set${setIndex}" accept="application/pdf">
-            <button class="btn" style="padding: 6px 10px; font-size: 11px;" onclick="uploadSetAnswerPdf(${setIndex})">📤 Upload Jawapan Set ${setIndex}</button>
-        </div>
-        <div id="pdfStatus_set${setIndex}" style="margin-top: 4px; font-size: 11px;">
-            ${hasPdf ? `<span style="color: green; font-weight: bold;">✅ Terwujud</span> <a href="${existingSetPdf}" target="_blank" class="btn-pdf-pro" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;">${pdfSvgIcon} <span>Lihat File</span></a>` : ''}
-        </div>
-        <div id="preview_set${setIndex}" class="preview-container" style="${hasPdf ? 'display:block;' : 'display:none;'}">
-            <iframe src="${hasPdf ? getDriveEmbedUrl(existingSetPdf) : ''}" id="iframe_set${setIndex}"></iframe>
-        </div>
-    </div>
-`;
+                    uploadHtml = `
+                        <div class="upload-cell">
+                            <div style="display: flex; gap: 5px; flex-direction: column;">
+                                <input type="file" id="pdfFileInput_set${setIndex}" accept="application/pdf">
+                                <button class="btn" style="padding: 6px 10px; font-size: 11px;" onclick="uploadSetAnswerPdf(${setIndex})">📤 Upload Jawapan Set ${setIndex}</button>
+                            </div>
+                            <div id="pdfStatus_set${setIndex}" style="margin-top: 4px; font-size: 11px;">
+                                ${hasPdf ? `<span style="color: green; font-weight: bold;">✅ Terwujud</span> <a href="${existingSetPdf}" target="_blank" class="btn-pdf-pro" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;">${pdfSvgIcon} <span>Lihat File</span></a>` : ''}
+                            </div>
+                            <div id="preview_set${setIndex}" class="preview-container" style="${hasPdf ? 'display:block;' : 'display:none;'}">
+                                <iframe src="${hasPdf ? getDriveEmbedUrl(existingSetPdf) : ''}" id="iframe_set${setIndex}"></iframe>
+                            </div>
+                        </div>
+                    `;
                 }
 
                 const row = document.createElement("div");
@@ -610,7 +614,6 @@ uploadHtml = `
                     matric: currentStudentData.matric,
                     uploadPdf: true,
                     setIndex: setIndex,
-                    fileName: `Jawapan_Set${setIndex}_${currentStudentData.matric}.pdf`,
                     fileBytes: bytes
                 };
 
@@ -622,23 +625,25 @@ uploadHtml = `
                     });
                     const res = await response.json();
                     if (res.status === "success") {
-                        const embedUrl = getDriveEmbedUrl(res.pdfUrl);
+                        pdfStatus.innerHTML = `<span style="color: green; font-weight: bold;">✅ Terwujud</span> <a href="${res.pdfUrl}" target="_blank" class="btn-pdf-pro" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;">${pdfSvgIcon} <span>Lihat File</span></a>`;
+                        
                         if(!currentStudentData.setAnswerLinks) currentStudentData.setAnswerLinks = {};
                         currentStudentData.setAnswerLinks[setIndex] = res.pdfUrl;
                         saveToLocalStorage();
 
-                        pdfStatus.innerHTML = `<span style="color: green; font-weight: bold;">✅ Berjaya!</span> <a href="${res.pdfUrl}" target="_blank" class="btn-pdf-pro" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;">${pdfSvgIcon} <span>Lihat File</span></a>`;
-                        const previewBox = document.getElementById(`preview_set${setIndex}`);
-                        const iframe = document.getElementById(`iframe_set${setIndex}`);
-                        iframe.src = embedUrl;
-                        previewBox.style.display = 'block';
+                        const previewElem = document.getElementById(`preview_set${setIndex}`);
+                        const iframeElem = document.getElementById(`iframe_set${setIndex}`);
+                        if (previewElem && iframeElem) {
+                            iframeElem.src = getDriveEmbedUrl(res.pdfUrl);
+                            previewElem.style.display = "block";
+                        }
 
-                        showNotification(`✅ Fail Set ${setIndex} tersimpan!`);
+                        showNotification(`✅ Jawapan Set ${setIndex} tersimpan!`);
                     } else {
                         pdfStatus.innerHTML = "❌ Gagal: " + (res.message || "Ralat");
                     }
                 } catch (err) {
-                    pdfStatus.innerHTML = "❌ Ralat sambungan.";
+                    pdfStatus.innerHTML = "❌ Ralat memuat naik fail.";
                     console.error(err);
                 }
             };
